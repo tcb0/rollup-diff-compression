@@ -81,4 +81,4 @@ for key in repeats.keys():
 
 print ( "total saving v naive " , 100 - (naive_cost - sum(savings)) / naive_cost * 100) 
 print ( "total saving including amount compress " , (naive_cost - (compress_amount - sum(savings))) / compress_amount)
-pdb.set_trace()
+# pdb.set_trace()

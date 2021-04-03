@@ -68,6 +68,30 @@ def get_stats_for_month_may(total_gas_cost_naive: int, total_gas_cost_compressed
           (total_gas_cost_naive - total_gas_cost_compressed_same_amounts) / total_gas_cost_naive * 100)
 
 
+def get_cumulative_gas_costs_per_month_with_savings(gas_costs_per_month: Dict[int, int], gas_costs_per_month_compressed_same_amounts: Dict[int, int]) -> Dict[int, Dict[str, int]]:
+
+    gas_costs_cumulative = {}
+
+    for month_id, gas_cost_per_month in gas_costs_per_month.items():
+
+        if month_id != 0:
+            gas_costs_cumulative[month_id] = {
+                'native': gas_costs_cumulative[month_id - 1]['native'] + gas_cost_per_month,
+                'compressed': gas_costs_cumulative[month_id - 1]['compressed'] + gas_costs_per_month_compressed_same_amounts[month_id]
+            }
+        else:
+            gas_costs_cumulative[month_id] = {
+                'native': gas_cost_per_month,
+                'compressed': gas_costs_per_month_compressed_same_amounts[month_id]
+            }
+
+        gas_costs_cumulative[month_id]['savings'] = gas_costs_cumulative[month_id]['native'] - gas_costs_cumulative[month_id]['compressed']
+
+    return gas_costs_cumulative
+
+
+
+
 def get_stats_naive_vs_compressed(txs: List[List[dict]], airdrops_per_month: Dict[int, int], naive_gas_cost_per_airdrop: int):
 
     print("Airdrops per month", airdrops_per_month)
@@ -77,6 +101,10 @@ def get_stats_naive_vs_compressed(txs: List[List[dict]], airdrops_per_month: Dic
 
     print("Gas cost per month naive", gas_cost_per_month_naive)
     print("Gas cost per month compressed", gas_cost_per_month_compressed)
+
+    gas_costs_cumulative_with_savings = get_cumulative_gas_costs_per_month_with_savings(gas_cost_per_month_naive, gas_cost_per_month_compressed)
+
+    print("Gas cost per month cumulative with savings: ", gas_costs_cumulative_with_savings)
 
     total_gas_cost_naive = get_total_gas_cost(gas_cost_per_month_naive)
     total_gas_cost_compressed_same_amounts = get_total_gas_cost(gas_cost_per_month_compressed)
@@ -89,36 +117,7 @@ def get_stats_naive_vs_compressed(txs: List[List[dict]], airdrops_per_month: Dic
 
     get_stats_for_month_may(gas_cost_per_month_naive[0], gas_cost_per_month_compressed[0])
 
-
-def get_permutations_per_distribution(repeated_users: List[str], user_txs: Dict[str, list], num_distributions: int) -> Dict[str, int]:
-    repeats = {}
-    # Gets repeats, permutations for user appearance in each month
-    for user in repeated_users:
-        user_repeat = [0] * num_distributions
-        for tx in user_txs[user]:
-            user_repeat[tx["month"]] = 1
-
-        user_repeat_key = str(user_repeat)
-        if user_repeat_key in repeats:
-            repeats[user_repeat_key] += 1
-        else:
-            repeats[user_repeat_key] = 1
-
-    return repeats
-
-
-def main():
-
-    txs = get_transactions()
-    num_distributions = len(txs)
-    naive_gas_cost_per_airdrop = 231
-    airdrops_per_month = get_airdrops_per_month(txs)
-
-    # print("Stats naive vs compressed:")
-    # print("\n===========================================================================\n")
-    # get_stats_naive_vs_compressed(txs, airdrops_per_month, naive_gas_cost_per_airdrop)
-    # print("\n===========================================================================\n")
-
+def get_permutations_savings(txs: List[List[dict]], num_distributions: int):
     user_data = get_user_data(txs)
 
     users = user_data['users']
@@ -138,7 +137,98 @@ def main():
     permutations = get_permutations_per_distribution(repeated_users, user_txs,  num_distributions)
 
     print("Permutations", permutations)
+
+    # check_if_permutations_are_unique(permutations)
+    sorted_permutations = {k: v for k, v in sorted(permutations.items(), key=lambda item: item[1], reverse=True)}
+    print("Sorted permutations", sorted_permutations)
     print("Total permutations", len(permutations.keys()))
+    print("Total repeated users in permutations", sum(permutations.values()))
+
+    permutations_savings = get_gas_cost_savings_by_reusing_groups(txs, permutations, repeated_users, 2)
+    print("Permutations savings per month", permutations_savings)
+    print("Permutations savings total", sum(permutations_savings))
+
+
+def get_permutations_per_distribution(repeated_users: List[str], user_txs: Dict[str, list], num_distributions: int) -> Dict[str, int]:
+    repeats = {}
+    # Gets repeats, permutations for user appearance in each month
+    for user in repeated_users:
+        user_repeat = [0] * num_distributions
+        for tx in user_txs[user]:
+            user_repeat[tx["month"]] = 1
+
+        user_repeat_key = str(user_repeat)
+        if user_repeat_key in repeats:
+            repeats[user_repeat_key] += 1
+        else:
+            repeats[user_repeat_key] = 1
+
+    return repeats
+
+def check_if_permutations_are_unique(permutations: Dict[str, int]):
+    print("Permutations", permutations)
+
+    unique_permutations = {}
+    permutation_keys = permutations.keys()
+    for key in permutation_keys:
+        if key in unique_permutations:
+            unique_permutations[key] += 1
+        else:
+            unique_permutations[key] = 1
+
+    total_unique_permutations = sum(unique_permutations.values())
+    print("Total unique permutations sum values:", total_unique_permutations)
+    print("Total unique permutations keys:", len(unique_permutations.keys()))
+
+
+def get_gas_cost_savings_by_reusing_groups(txs: List[List[dict]], permutations: Dict[str, int], repeated_users: List[str], gas_per_bit: int) -> List[int]:
+
+    savings = [0] * (len(txs) + 1)
+
+    for permutation_key, repeated_user_per_group in permutations.items():
+
+        # back to list format
+        perm_key_str = permutation_key[1:-1].split(",")
+        perm_key_list = [int(x) for x in perm_key_str]
+
+        source = 0
+
+        for i, x in enumerate(perm_key_list):
+
+            # find the group to permute
+            if source != 0:
+                if x == 0:
+                    continue
+                else:
+
+                    # calculate how much the permute costs
+                    cost_of_permutation = source * gas_per_bit * 1
+
+                    savings[i] += (repeated_user_per_group * gas_per_bit * 17) - cost_of_permutation
+                    source = len(txs[i])
+            if x != 0:
+                source = len(txs[i])
+
+    return savings
+
+def main():
+
+    txs = get_transactions()
+    num_distributions = len(txs)
+    naive_gas_cost_per_airdrop = 231
+    airdrops_per_month = get_airdrops_per_month(txs)
+
+    print("Stats naive vs compressed:")
+    print("\n===========================================================================\n")
+    get_stats_naive_vs_compressed(txs, airdrops_per_month, naive_gas_cost_per_airdrop)
+    print("\n===========================================================================\n")
+
+
+    print("Savings from permutations from naive:")
+    print("\n===========================================================================\n")
+    get_permutations_savings(txs, num_distributions)
+    print("\n===========================================================================\n")
+
 
 
 if __name__ == '__main__':
