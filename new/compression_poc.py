@@ -3,7 +3,7 @@
 # https://rinkeby.etherscan.io/address/0x8fdc779f1e8ae2256c663cd80e8d090c4523f159#code
 # https://rinkeby.etherscan.io/token/0xe0d8d7b8273de14e628d2f2a4a10f719f898450a?a=0x1F0569682c4146c8540a7b987142899E788caeFd#readProxyContract
 from typing import List, Dict
-from new.utils import get_user_data, get_transactions, get_repeated_users_data
+from new.utils import get_user_data, get_transactions, get_repeated_users_data, get_parsed_users_data
 
 
 def get_airdrops_per_month(txs: List[List[dict]]) -> Dict[int, int]:
@@ -164,6 +164,7 @@ def get_permutations_per_distribution(repeated_users: List[str], user_txs: Dict[
 
     return repeats
 
+
 def check_if_permutations_are_unique(permutations: Dict[str, int]):
     print("Permutations", permutations)
 
@@ -211,47 +212,36 @@ def get_gas_cost_savings_by_reusing_groups_all_data(txs: List[List[dict]], permu
     return savings
 
 
-def get_permutations_savings_previous_data(txs: List[List[dict]], num_distributions: int):
-    repeated_users_data = get_repeated_users_data(txs)
+def get_permutations_savings_previous_data(parsed_data: dict, bits_per_address=17, bits_per_balance=16, gas_cost_per_bit_total=7):
 
-    users = repeated_users_data['users']
-    for key, values in users.items():
-        print(f"Users for month {key}: {len(values)}")
-    repeated_users = repeated_users_data['repeated_users']
+    gas_cost_per_airdrop = (bits_per_address + bits_per_balance) * gas_cost_per_bit_total
 
-    # print("Users per month: ", users)
-    print("Repeated users per month", repeated_users)
+    for distribution_id, distribution_data in parsed_data.items():
+        distribution_data['gas_cost'] = 0
 
-def get_gas_cost_savings_by_reusing_groups_only_previous_data(txs: List[List[dict]], permutations: Dict[str, int], repeated_users: List[str], gas_per_bit: int) -> List[int]:
+        if distribution_id == 0:
+            distribution_data['gas_cost'] = distribution_data['num_users'] * gas_cost_per_airdrop
+            continue
 
-    savings = [0] * (len(txs) + 1)
+        for user_key, user_data in distribution_data['users'].items():
 
-    for permutation_key, repeated_user_per_group in permutations.items():
+            num_repeats = sum(user_data['repeats_in_prev_months'])
+            user_gas_cost = 0
 
-        # back to list format
-        perm_key_str = permutation_key[1:-1].split(",")
-        perm_key_list = [int(x) for x in perm_key_str]
+            if num_repeats == 0:
+                # unique user
+                user_gas_cost = gas_cost_per_airdrop
+            else:
+                user_gas_cost = bits_per_balance * gas_cost_per_bit_total + 1 # gas bits for
 
-        source = 0
+            distribution_data['gas_cost'] += user_gas_cost
 
-        for i, x in enumerate(perm_key_list):
+    total_gas_cost = 0
+    for distribution_id, distribution_data in parsed_data.items():
+        total_gas_cost += distribution_data['gas_cost']
+        print("Gas cost per distribution", distribution_id, distribution_data['gas_cost'])
 
-            # find the group to permute
-            if source != 0:
-                if x == 0:
-                    continue
-                else:
-
-                    # calculate how much the permute costs
-                    cost_of_permutation = source * gas_per_bit * 1
-
-                    savings[i] += (repeated_user_per_group * gas_per_bit * 17) - cost_of_permutation
-                    source = len(txs[i])
-            if x != 0:
-                source = len(txs[i])
-
-    return savings
-
+    print("Total gas cost", total_gas_cost)
 
 
 def main():
@@ -260,22 +250,29 @@ def main():
     num_distributions = len(txs)
     naive_gas_cost_per_airdrop = 231
     airdrops_per_month = get_airdrops_per_month(txs)
-    #
-    # print("Stats naive vs compressed:")
-    # print("\n===========================================================================\n")
-    # get_stats_naive_vs_compressed(txs, airdrops_per_month, naive_gas_cost_per_airdrop)
-    # print("\n===========================================================================\n")
-    #
-    # print("Savings from permutations compared to naive (all data):")
-    # print("\n===========================================================================\n")
-    # get_permutations_savings_all_data(txs, num_distributions)
-    # print("\n===========================================================================\n")
+
+    print("Stats naive vs compressed:")
+    print("\n===========================================================================\n")
+    get_stats_naive_vs_compressed(txs, airdrops_per_month, naive_gas_cost_per_airdrop)
+    print("\n===========================================================================\n")
+
+    print("Savings from permutations compared to naive (all data):")
+    print("\n===========================================================================\n")
+    get_permutations_savings_all_data(txs, num_distributions)
+    print("\n===========================================================================\n")
+
+    parsed_data = get_parsed_users_data(cached=False)
+    for distribution_id, distribution_data in parsed_data.items():
+        print(distribution_id, distribution_data['num_users'], distribution_data['num_unique_users'], distribution_data['permutations'])
+    # print(txs_dict)
 
     print("Savings from permutations compared to naive (previous data):")
     print("\n===========================================================================\n")
-    get_permutations_savings_previous_data(txs, num_distributions)
+    get_permutations_savings_previous_data(parsed_data)
     print("\n===========================================================================\n")
 
+
+    # print(txs_dict)
 
 if __name__ == '__main__':
     main()
