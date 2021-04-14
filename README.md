@@ -2,4 +2,4 @@
 
 ## Rollup diff compression experiments 
 
-Work in progress, README.md will be updated.
+Doc: https://hackmd.io/TBqv7oyzSneMbHXEn8wmeQ?view
