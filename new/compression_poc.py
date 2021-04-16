@@ -29,6 +29,33 @@ def get_max_karma(parsed_data: dict):
     return max_karma
 
 
+def get_max_karma_diff(parsed_data: dict):
+    user_karmas = get_user_karmas(parsed_data)
+
+    max_karma_diff = 0
+    for user, karmas in user_karmas.items():
+        for i, karma in enumerate(karmas):
+            if i > 0:
+                curr_karma_diff = abs(int(karma) - int(karmas[i-1]))
+                if curr_karma_diff > max_karma_diff:
+                    max_karma_diff = curr_karma_diff
+
+    return max_karma_diff
+
+
+def get_user_karmas(parsed_data: dict):
+
+    user_karmas = {}
+    for distribution_data in parsed_data.values():
+        for user, user_data in distribution_data['users'].items():
+            if user not in user_karmas:
+                user_karmas[user] = []
+            user_karmas[user].append(user_data['karma'])
+
+    return user_karmas
+
+
+
 def get_airdrops_per_month(txs: List[List[dict]]) -> Dict[int, int]:
     airdrops_per_month = {i: len(txs_per_month) for i, txs_per_month in enumerate(txs)}
     return airdrops_per_month
@@ -405,6 +432,11 @@ def compute_compression_stats(txs: List[List[dict]], airdrops_per_month: Dict[in
     print("Total airdrops", sum(airdrops_per_month.values()))
 
     parsed_data = get_parsed_users_data(cached=False)
+    max_karma = get_max_karma(parsed_data)
+    max_karma_diff = get_max_karma_diff(parsed_data)
+
+    print(f"Max karma: {max_karma}")
+    print(f"Max karma diff: {max_karma_diff}")
 
     gas_cost_per_dist_naive = get_gas_costs_per_dist(airdrops_per_month)
     gas_cost_per_dist_compressed = get_gas_costs_per_dist_compressed(txs)

@@ -82,12 +82,12 @@ def make_parsed_users_data() -> dict:
             'sum_users_prev_months': 0,
             'num_unique_users': 0,
             'permutations': {},
-            'users': {}
+            'users': {},
         }
         for row in reader:
             txs[i]['users'][row['username']] = {
                 'karma': row['karma'],
-                'repeats_in_prev_months': []
+                'repeats_in_prev_months': [],
             }
 
         txs[i]['num_users'] = len(txs[i]['users'].keys())
@@ -113,7 +113,9 @@ def add_user_repeats_and_permutations(txs: dict) -> dict:
                 if user in txs[j]['users']:
                     distribution_data['users'][user]['repeats_in_prev_months'][j] = 1
 
+
     for distribution_id, distribution_data in txs.items():
+
         for user in distribution_data['users'].keys():
             user_repeats = distribution_data['users'][user]['repeats_in_prev_months']
             permutation_key_str = str(user_repeats)
