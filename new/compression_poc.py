@@ -4,7 +4,7 @@
 # https://rinkeby.etherscan.io/token/0xe0d8d7b8273de14e628d2f2a4a10f719f898450a?a=0x1F0569682c4146c8540a7b987142899E788caeFd#readProxyContract
 from typing import List, Dict, Union, Tuple
 from new.utils import get_user_data, get_transactions, get_repeated_users_data, get_parsed_users_data
-
+from new import charting
 # global params
 
 BITS_USER_ID = 17
@@ -81,12 +81,18 @@ def get_gas_costs_per_dist_compressed(txs: List[List[dict]]) -> dict:
     return gas_costs_per_dist_compressed
 
 
-def get_gas_costs_per_dist_compressed_grouped_by_value_range(txs: List[List[dict]]) -> dict:
+def get_amount_occurences_total(txs: List[List[dict]]) -> Tuple[list, dict]:
+    amounts = get_all_amounts(txs)
+    amount_occurrences = get_unique_amounts_per_distribution(amounts)
+    return amounts, amount_occurrences
+
+
+def get_gas_costs_per_dist_compressed_grouped_by_value_range(txs: List[List[dict]]) -> Tuple[dict, dict]:
 
     gas_costs_per_dist_compressed = {grouping_range: {dist_id: 0 for dist_id in range(0, len(txs))} for grouping_range in GROUPING_BY_AMOUNT_RANGE_VALUES}
 
     dists_amounts = get_amounts_for_each_dist(txs)
-
+    total_gas_costs = {}
     print("\nDists stats value range\n")
 
     for amount_range in GROUPING_BY_AMOUNT_RANGE_VALUES:
@@ -99,17 +105,20 @@ def get_gas_costs_per_dist_compressed_grouped_by_value_range(txs: List[List[dict
             gas_costs[dist_id] = gas_cost_dist
             amounts[dist_id] = unique_groups_dist
 
-        print(f"Dists stats for amount range: {amount_range}, total gas cost: {sum(gas_costs.values())}, total num amounts: {sum(amounts.values())}, gas costs: {gas_costs}, num amounts: {amounts}")
+        total_gas_costs[f"GR {amount_range}"] = sum(gas_costs.values())
 
-    return gas_costs_per_dist_compressed
+        print(f"Dists stats for amount range: {amount_range}, total gas cost: {total_gas_costs[f'GR {amount_range}']}, total num amounts: {sum(amounts.values())}, gas costs: {gas_costs}, num amounts: {amounts}")
+
+    return gas_costs_per_dist_compressed, total_gas_costs
 
 
-def get_gas_costs_per_dist_compressed_grouped_by_number_of_values(txs: List[List[dict]]) -> dict:
+def get_gas_costs_per_dist_compressed_grouped_by_number_of_values(txs: List[List[dict]]) -> Tuple[dict, dict]:
     gas_costs_per_dist_compressed = {grouping_range: {dist_id: 0 for dist_id in range(0, len(txs))} for grouping_range in GROUPING_BY_NUMBER_OF_AMOUNTS_VALUES}
 
     dists_amounts = get_amounts_for_each_dist(txs)
 
     print("\nDists stats number of values in group\n")
+    total_gas_costs = {}
 
 
     for amount_range in GROUPING_BY_NUMBER_OF_AMOUNTS_VALUES:
@@ -122,9 +131,11 @@ def get_gas_costs_per_dist_compressed_grouped_by_number_of_values(txs: List[List
             gas_costs[dist_id] = gas_cost_dist
             groups[dist_id] = unique_groups_dist
 
-        print(f"Dists stats for amount range: {amount_range}, total gas cost: {sum(gas_costs.values())}, total groups: {sum(groups.values())}, gas costs: {gas_costs}, groups: {groups}")
+        total_gas_costs[f"GR {amount_range}"] = sum(gas_costs.values())
 
-    return gas_costs_per_dist_compressed
+        print(f"Dists stats for amount range: {amount_range}, total gas cost: {total_gas_costs[f'GR {amount_range}']}, total groups: {sum(groups.values())}, gas costs: {gas_costs}, groups: {groups}")
+
+    return gas_costs_per_dist_compressed, total_gas_costs
 
 
 def get_amounts_for_each_dist(txs: List[List[dict]]) -> List[List[float]]:
@@ -135,6 +146,18 @@ def get_amounts_for_each_dist(txs: List[List[dict]]) -> List[List[float]]:
             months[i].append(float(tx["karma"]))
 
     return months
+
+
+def get_all_amounts(txs: List[List[dict]]) -> List[float]:
+
+    amounts = []
+
+    for i, monthly_txs in enumerate(txs):
+        for tx in monthly_txs:
+            amounts.append(float(tx["karma"]))
+
+    return amounts
+
 
 
 def group_amounts_by_value_range(dist_amounts: List[List[float]], amount_range: int) -> List[Dict[float, int]]:
@@ -426,6 +449,8 @@ def get_data_stats(txs: List[List[dict]]):
         print(
             f"Distribution: {distribution_id}, number of unique amounts: {len(distribution_unique_amounts)}, Most common: {top_50_most_common}")
 
+    return unique_amounts
+
 
 def compute_compression_stats(txs: List[List[dict]], airdrops_per_month: Dict[int, int]):
     print("Airdrops per month", airdrops_per_month)
@@ -442,17 +467,58 @@ def compute_compression_stats(txs: List[List[dict]], airdrops_per_month: Dict[in
     gas_cost_per_dist_compressed = get_gas_costs_per_dist_compressed(txs)
     gas_cost_per_dist_permutations = get_gas_costs_per_dist_permutations(txs)
     gas_cost_per_dist_referencing = get_gas_cost_dist_referencing(parsed_data)
-    gas_cost_per_dist_grouped_by_value_range = get_gas_costs_per_dist_compressed_grouped_by_value_range(txs)
-    gas_cost_per_dist_grouped_by_number_of_values = get_gas_costs_per_dist_compressed_grouped_by_number_of_values(txs)
+    gas_cost_per_dist_grouped_by_value_range, total_gas_costs_v_range = get_gas_costs_per_dist_compressed_grouped_by_value_range(txs)
+    # print(gas_cost_per_dist_grouped_by_value_range)
+    gas_cost_per_dist_grouped_by_number_of_values, total_gas_costs_n_values = get_gas_costs_per_dist_compressed_grouped_by_number_of_values(txs)
 
-    # stats = make_stats_compression(gas_cost_per_dist_naive, gas_cost_per_dist_compressed,
-    #                                gas_cost_per_dist_permutations, gas_cost_per_dist_referencing)
+    stats = make_stats_compression(gas_cost_per_dist_naive, gas_cost_per_dist_compressed,
+                                   gas_cost_per_dist_permutations, gas_cost_per_dist_referencing)
     # print_compression_stats(stats)
+    # charting.create_gas_cost_diff_chart((gas_cost_per_dist_naive, gas_cost_per_dist_compressed), ("Naive gas cost", "Compressed gas cost"), "Naive v compressed gas costs", "Gas cost", "Dist ID")
+    # charting.create_gas_cost_diff_chart((gas_cost_per_dist_naive, gas_cost_per_dist_permutations), ("Naive gas cost", "Permutations gas cost"), "Naive v permutations gas costs", "Gas cost", "Dist ID", (False, True))
+    # charting.create_gas_cost_diff_chart((gas_cost_per_dist_naive, gas_cost_per_dist_referencing), ("Naive gas cost", "Referencing gas cost"), "Naive v referencing gas costs", "Gas cost", "Dist ID", (False, True))
+    # charting.create_gas_costs_diff_groups_chart(gas_cost_per_dist_naive, gas_cost_per_dist_grouped_by_value_range, "Naive v groups by value range gas costs", "Gas cost", "Dist ID")
+    # charting.create_gas_costs_diff_groups_chart(gas_cost_per_dist_naive, gas_cost_per_dist_grouped_by_number_of_values, "Naive v groups by number of values gas costs", "Gas cost", "Dist ID")
+
+    gas_cost_naive_total = sum(gas_cost_per_dist_naive.values())
+    gas_cost_compressed_total = sum(gas_cost_per_dist_compressed.values())
+    # gas_cost_permutations_total = sum(gas_cost_per_dist_permutations.values())
+    gas_cost_referencing_total = sum(gas_cost_per_dist_referencing.values())
+
+    gas_cost_grouping_value_range_total_best = min(total_gas_costs_v_range.values())
+    gas_cost_grouping_num_values_total_best = min(total_gas_costs_n_values.values())
+
+    gas_costs = {
+        'Naive': gas_cost_naive_total,
+        'Compressed': gas_cost_compressed_total,
+        'Referencing': gas_cost_referencing_total,
+        'Value range': gas_cost_grouping_value_range_total_best,
+        'Num values': gas_cost_grouping_num_values_total_best,
+    }
+
+    charting.create_gas_costs_totals_chart(gas_costs, "Total gas costs", "Total gas cost", "Approach")
+
+
+
+    # gas_costs = {'Naive': gas_cost_naive_total}
+    # for k, v in total_gas_costs_v_range.items():
+    #     gas_costs[k] = v
+    # charting.create_gas_costs_totals_chart(gas_costs, "Naive v groups by value range total gas costs", "Total gas cost", "Group ID")
+
+    # gas_costs = {'Naive': gas_cost_naive_total}
+    # for k, v in total_gas_costs_n_values.items():
+    #     gas_costs[k] = v
+    #
+    # charting.create_gas_costs_totals_chart(gas_costs, "Naive v groups by number of values gas costs", "Total gas cost", "Group ID")
+    #
+
+
 
     value_range_stats, num_values_stats = make_stats_grouping(gas_cost_per_dist_naive, gas_cost_per_dist_compressed, gas_cost_per_dist_grouped_by_value_range, gas_cost_per_dist_grouped_by_number_of_values)
-
-    print_stats_grouping(value_range_stats, 'group_range')
+    #
+    # print_stats_grouping(value_range_stats, 'group_range')
     # print_stats_grouping(num_values_stats, 'group_numbers')
+    return parsed_data
 
 
 def get_gas_costs_per_dist_permutations(txs: List[List[dict]]) -> Dict[int, int]:
@@ -488,9 +554,25 @@ def get_gas_costs_per_dist_permutations(txs: List[List[dict]]) -> Dict[int, int]
     print("Total costs per distribution", distribution_costs)
     print("Permutation costs per distribution", permutation_costs)
     print("Permutation repeating users", repeating_users_per_dist)
+    print("Permutation total repeating users", sum(repeating_users_per_dist))
+
+    repeating_percents = get_repeating_percents(txs, repeating_users_per_dist[:-1])
+
+    print("Permutation repeating users percent", repeating_percents)
 
     return distribution_costs
 
+
+def get_repeating_percents(txs: List[List[dict]], repeating_users):
+
+    repeating_percents = {
+
+    }
+
+    for i, repeats_dist in enumerate(repeating_users):
+        repeating_percents[i] = repeats_dist/len(txs[i]) * 100
+
+    return repeating_percents
 
 def get_permutations_per_distribution(repeated_users: List[str], user_txs: Dict[str, list], num_distributions: int) -> \
 Dict[str, int]:
@@ -637,17 +719,17 @@ def get_gas_cost_dist_referencing(parsed_data: dict) -> Dict[int, int]:
 
 def main():
     txs = get_transactions()
-    num_distributions = len(txs)
+    # num_distributions = len(txs)
     airdrops_per_month = get_airdrops_per_month(txs)
-
-    print("Data stats:")
-    print("\n===========================================================================\n")
-    get_data_stats(txs)
-    print("\n===========================================================================\n")
-
-    print("Stats naive vs compressed vs permutations:")
-    print("\n===========================================================================\n")
-    compute_compression_stats(txs, airdrops_per_month)
+    #
+    # print("Data stats:")
+    # print("\n===========================================================================\n")
+    # get_data_stats(txs)
+    # print("\n===========================================================================\n")
+    #
+    # print("Stats naive vs compressed vs permutations:")
+    # print("\n===========================================================================\n")
+    parsed_data = compute_compression_stats(txs, airdrops_per_month)
     print("\n===========================================================================\n")
 
     # parsed_data = get_parsed_users_data(cached=False)
@@ -663,6 +745,19 @@ def main():
     # print("\n===========================================================================\n")
 
     # print(txs_dict)
+
+    # parsed_data = get_parsed_users_data(cached=True)
+    # charting.create_airdrops_chart(parsed_data)
+    # charting.create_repeating_users_chart(parsed_data)
+    # gas_costs = get_gas_costs_per_dist(airdrops_per_month)
+    # charting.create_gas_costs_chart(gas_costs)
+
+    # amounts, unique_amounts = get_amount_occurences_total(txs)
+    # sorted_unique_amounts = {k: v for k, v in sorted(unique_amounts.items(), key=lambda item: item[1], reverse=True)}
+    #
+    # print(sorted_unique_amounts)
+    # charting.create_frequencies_chart(unique_amounts)
+
 
 
 if __name__ == '__main__':
