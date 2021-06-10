@@ -1,43 +1,27 @@
 import csv
 import json
 import os
+import glob
 from typing import List, Dict, Union
 
 
-filenames = [
-    "round_1_finalized",
-    "round_2_finalized",
-    "round_3_finalized",
-    "round_4_finalized",
-    "round_5_finalized",
-    "round_6_finalized",
-    "round_7_finalized",
-    "round_8_finalized",
-    "round_9_finalized",
-    "round_10_finalized"
-]
+def get_file_paths(dataset: str):
+    paths = glob.glob(f"../data/{dataset}/*.csv")
+    paths = sorted(paths, key=lambda filename: int(filename.split('_')[1]))
+    return paths
 
 
-def get_transactions() -> List[List[dict]]:
-    # break data into daily updates
+def get_transactions(dataset: str) -> List[List[dict]]:
     txs = []
-    month_count = 0
-    current_month = 0
-    for i, filename in enumerate(filenames):
-        reader = csv.DictReader(open("data/" + filename + ".csv"))
+    paths = get_file_paths(dataset)
+    for i, path in enumerate(paths):
+        reader = csv.DictReader(open(path))
+        txs.append([])
         for row in reader:
-            # get only mints
-            month = i
+            if not row['blockchain_address'] or not row['karma']:
+                continue
 
-            if current_month != month:
-                month_count += 1
-                current_month = month
-
-            try:
-                txs[month_count].append(row)
-            except:
-                txs.append([])
-                txs[month_count].append(row)
+            txs[i].append(row)
 
     return txs
 
@@ -50,7 +34,7 @@ def get_transactions() -> List[List[dict]]:
 #       `num_unique_users`: 0, # the number of unique users per distribution
 #       `permutations`: {}, # dict of permutation keys and repeats per key (used to determine how the users are distributed in regards of the previous months), contains permutations for the previous distributions only
 #       `users`: {
-#           `username`: {
+#           `blockchain_address`: {
 #             `karma`: 5,
 #             `repeats_in_prev_months`: [] # list with length of the previous distributions
 #            },
@@ -59,24 +43,25 @@ def get_transactions() -> List[List[dict]]:
 #    }
 #     ...
 #   }
-def get_parsed_users_data(cached=True) -> dict:
-    parsed_data_file_path = "./user_data/parsed_transactions_dict.json"
+def get_parsed_users_data(dataset: str, cached=False) -> dict:
+    parsed_data_file_path = f"../user_data/{dataset}/parsed_transactions_dict.json"
 
     if os.path.exists(parsed_data_file_path) and cached:
         with open(parsed_data_file_path, "r") as f:
             data = json.loads(f.read())
     else:
-        data = make_parsed_users_data()
+        data = make_parsed_users_data(dataset)
         with open(parsed_data_file_path, "w") as f:
             f.write(json.dumps(data))
 
     return data
 
 
-def make_parsed_users_data() -> dict:
+def make_parsed_users_data(dataset: str) -> dict:
     txs = {}
-    for i, filename in enumerate(filenames):
-        reader = csv.DictReader(open("data/" + filename + ".csv"))
+    paths = get_file_paths(dataset)
+    for i, path in enumerate(paths):
+        reader = csv.DictReader(open(path))
         txs[i] = {
             'num_users': 0,
             'sum_users_prev_months': 0,
@@ -85,7 +70,11 @@ def make_parsed_users_data() -> dict:
             'users': {},
         }
         for row in reader:
-            txs[i]['users'][row['username']] = {
+
+            if not row['blockchain_address'] or not row['karma']:
+                continue
+
+            txs[i]['users'][row['blockchain_address']] = {
                 'karma': row['karma'],
                 'repeats_in_prev_months': [],
             }
@@ -144,8 +133,8 @@ def verify_permutations(txs):
     print("Users in month match the sum of the permuted groups: ", verify_list)
 
 
-def get_user_data(txs) -> Dict[str, Union[Dict[str, float], List[str], Dict[str, list]]]:
-    parsed_data_file_path = "./user_data/parsed_user_data.json"
+def get_user_data(dataset: str, txs) -> Dict[str, Union[Dict[str, float], List[str], Dict[str, list]]]:
+    parsed_data_file_path = f"../user_data/{dataset}/parsed_user_data.json"
 
     if os.path.exists(parsed_data_file_path):
         with open(parsed_data_file_path, "r") as f:
@@ -165,7 +154,7 @@ def make_user_data(txs) -> Dict[str, Union[Dict[str, float], List[str], Dict[str
     # get general user data
     for i, month in enumerate(txs):
         for tx in month:
-            user = tx["username"]
+            user = tx["blockchain_address"]
             # shows what month the tx was from
             tx["month"] = i
             if user in users.keys():
@@ -177,13 +166,11 @@ def make_user_data(txs) -> Dict[str, Union[Dict[str, float], List[str], Dict[str
                 users[user] = float(tx["karma"])
                 user_txs[user] = [tx]
 
-
-
     return {'users': users, 'repeated_users': repeated_users, 'user_txs': user_txs}
 
 
-def get_repeated_users_data(txs) -> Dict[str, Union[Dict[int, List[str]], Dict[int, int]]]:
-    parsed_repeated_user_data = "./user_data/parsed_repeated_user_data.json"
+def get_repeated_users_data(dataset: str, txs) -> Dict[str, Union[Dict[int, List[str]], Dict[int, int]]]:
+    parsed_repeated_user_data = f"../user_data/{dataset}/parsed_repeated_user_data.json"
 
     if os.path.exists(parsed_repeated_user_data):
         with open(parsed_repeated_user_data, "r") as f:
@@ -202,7 +189,7 @@ def make_repeated_users_data(txs) -> Dict[str, Union[Dict[int, List[str]], Dict[
     for i, month in enumerate(txs):
         users_per_month[i] = []
         for tx in month:
-            user = tx["username"]
+            user = tx["blockchain_address"]
             users_per_month[i].append(user)
 
     # get repeated users per month
@@ -213,7 +200,7 @@ def make_repeated_users_data(txs) -> Dict[str, Union[Dict[int, List[str]], Dict[
         for j in range(0, i):
             repeated_users_per_month[i][j] = 0
             for tx in month:
-                user = tx['username']
+                user = tx['blockchain_address']
                 if user in users_per_month[j]:
                     repeated_users_per_month[i][j] += 1
 

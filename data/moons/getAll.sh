@@ -1,0 +1,13 @@
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_13_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_12_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_11_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_10_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_9_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_8_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_7_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_6_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_5_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_4_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_3_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_2_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/CryptoCurrency/round_1_finalized.csv

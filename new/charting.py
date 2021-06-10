@@ -5,46 +5,45 @@ from typing import Tuple, Dict
 from new.utils import get_parsed_users_data
 
 
-def create_airdrops_chart(data: dict):
+def create_airdrops_chart(data: dict, dataset: str):
     ids = []
     airdrops = []
     unique_users = []
     for i, dist_data in data.items():
-        ids.append(i + 1)
+        ids.append(int(i) + 1)
         airdrops.append(dist_data['num_users'])
         unique_users.append(dist_data['num_unique_users'])
 
-    print("ids", ids)
-    print("airdrops", airdrops)
-    print("unique_users", unique_users)
-
     x = np.arange(len(ids))  # the ids locations
-    width = 0.2  # the width of the bars
+    width = 0.3 # the width of the bars
 
     fig, ax = plt.subplots()
 
-    rects1 = ax.bar(x - width / 2, airdrops, width, label='Airdrops')
-    rects2 = ax.bar(x + width / 2, unique_users, width, label='Unique users')
+    rects1 = ax.bar(x - width / 2, airdrops, width, label='Airdrops', color="lightblue")
+    rects2 = ax.bar(x + width / 2, unique_users, width, label='Unique users in dist', color="orange")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Airdrops')
-    ax.set_xlabel('Dist IDs')
+    ax.set_xlabel('Distributions')
     ax.set_title('Airdrops and unique users per distribution')
     ax.set_xticks(x)
     ax.set_xticklabels(ids)
     ax.legend()
 
-    ax.bar_label(rects1, padding=6)
-    ax.bar_label(rects2, padding=6)
+    ax.bar_label(rects1)
+
+    unique_users_labels = ['']
+    unique_users_labels.extend(unique_users[1:])
+    ax.bar_label(rects2, labels=unique_users_labels, label_type='edge')
 
     fig.tight_layout()
 
     plt.show()
 
-    fig.savefig("figs/new/airdrops.png")
+    fig.savefig(f"../figs/{dataset}/airdrops.png")
 
 
-def create_repeating_users_chart(data: dict):
+def create_repeating_users_chart(data: dict, dataset: str):
     ids = []
     repeating_users = []
     unique_users = []
@@ -58,29 +57,32 @@ def create_repeating_users_chart(data: dict):
 
     fig, ax = plt.subplots()
 
-    rects1 = ax.bar(x, unique_users, width, label='Unique users')
-    rects2 = ax.bar(x, repeating_users, width, label='Repeating users', bottom=unique_users)
+    rects1 = ax.bar(x, unique_users, width, label='Unique users', color="lightblue")
+    rects2 = ax.bar(x, repeating_users, width, label='Repeating users', bottom=unique_users, color="orange")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Users')
-    ax.set_xlabel('Dist IDs')
+    ax.set_xlabel('Distributions')
     ax.set_title('Users per distribution')
     ax.set_xticks(x)
     ax.set_xticklabels(ids)
     ax.legend()
 
+    repeating_users_labels = [""]
+    repeating_users_labels.extend(repeating_users[1:])
+
     ax.bar_label(rects1, label_type='center')
-    ax.bar_label(rects2, label_type='center')
+    ax.bar_label(rects2, labels=repeating_users_labels, label_type='center')
     ax.bar_label(rects2)
 
     fig.tight_layout()
 
     plt.show()
 
-    fig.savefig("figs/new/repeating_users.png")
+    fig.savefig(f"../figs/{dataset}/repeating_users.png")
 
 
-def create_gas_costs_chart(data: dict):
+def create_gas_costs_chart(data: dict, dataset: str):
     ids = []
     gas_costs = []
     for i, gas_cost in data.items():
@@ -89,11 +91,11 @@ def create_gas_costs_chart(data: dict):
     print(gas_costs)
 
     x = np.arange(len(ids))  # the ids locations
-    width = 0.5  # the width of the bars
+    width = 0.4  # the width of the bars
 
     fig, ax = plt.subplots()
 
-    rects1 = ax.bar(x, gas_costs, width, label='Gas cost')
+    rects1 = ax.bar(x, gas_costs, width, label='Gas cost', color="lightblue")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Gas Cost')
@@ -101,22 +103,22 @@ def create_gas_costs_chart(data: dict):
     ax.xaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('{x:,.0f}'))
 
     # ax.set_yscale('log')
-    ax.set_xlabel('Dist IDs')
+    ax.set_xlabel('Distributions')
     ax.set_title('Gas cost per distribution')
     ax.set_xticks(x)
     ax.set_xticklabels(ids)
     ax.legend()
 
-    # ax.bar_label(rects1, label_type='edge')
+    ax.bar_label(rects1, fmt="%.0f")
 
     fig.tight_layout()
 
     plt.show()
 
-    fig.savefig("figs/new/gas_costs.png")
+    fig.savefig(f"../figs/{dataset}/gas_costs.png")
 
 
-def create_frequencies_chart(unique_amounts: dict):
+def create_frequencies_chart(unique_amounts: dict, dataset: str):
     amounts = [int(amount) for amount in unique_amounts.keys()]
     frequencies = unique_amounts.values()
 
@@ -132,7 +134,7 @@ def create_frequencies_chart(unique_amounts: dict):
     ax.set_xscale('log')
 
     ax.set_xlabel('Amounts')
-    ax.set_title('Airdrop amount frequences')
+    ax.set_title('Airdrop amount frequencies')
     ax.legend()
 
     # ax.bar_label(rects1, label_type='edge')
@@ -141,7 +143,7 @@ def create_frequencies_chart(unique_amounts: dict):
 
     plt.show()
 
-    fig.savefig("figs/new/amounts.png")
+    fig.savefig(f"../figs/{dataset}/amounts.png")
 
 
 def create_gas_cost_diff_chart(gas_costs: Tuple[dict, dict],
@@ -149,6 +151,7 @@ def create_gas_cost_diff_chart(gas_costs: Tuple[dict, dict],
                                title: str,
                                ylabel: str,
                                xlabel: str,
+                               dataset: str,
                                set_bar_labels: Tuple[bool, bool] = (True, True)):
     gas_costs_1, gas_costs_2 = gas_costs
     label_1, label_2 = labels
@@ -158,7 +161,7 @@ def create_gas_cost_diff_chart(gas_costs: Tuple[dict, dict],
     costs_2 = [gas_cost_dist for gas_cost_dist in gas_costs_2.values()]
 
     x = np.arange(len(ids))  # the ids locations
-    width = 0.2  # the width of the bars
+    width = 0.3  # the width of the bars
 
     fig, ax = plt.subplots()
 
@@ -183,15 +186,17 @@ def create_gas_cost_diff_chart(gas_costs: Tuple[dict, dict],
 
     plt.show()
 
-    fig.savefig(f"figs/new/{title}.png")
+    fig.savefig(f"../figs/{dataset}/{title}.png")
 
 
 def create_gas_costs_diff_groups_chart(
         naive_gas_cost: Dict[int, int],
         gas_costs: Dict[int, dict],
-                                       title: str,
-                                       ylabel: str,
-                                       xlabel: str):
+        title: str,
+        ylabel: str,
+        xlabel: str,
+        dataset: str
+):
     num_gr = len(gas_costs.keys())
 
     labels = {gr: f"GR {gr} gas cost" for gr in gas_costs.keys()}
@@ -226,7 +231,7 @@ def create_gas_costs_diff_groups_chart(
 
     plt.show()
 
-    fig.savefig(f"figs/new/{title}.png")
+    fig.savefig(f"../figs/{dataset}/{title}.png")
 
 
 def create_gas_costs_totals_groups_chart(
@@ -234,7 +239,8 @@ def create_gas_costs_totals_groups_chart(
         gas_cost_totals: Dict[int, int],
         title: str,
         ylabel: str,
-        xlabel: str
+        xlabel: str,
+        dataset: str
 ):
 
     ids = ["Naive"]
@@ -261,14 +267,15 @@ def create_gas_costs_totals_groups_chart(
     fig.tight_layout()
     plt.show()
 
-    fig.savefig(f"figs/new/{title}.png")
+    fig.savefig(f"../figs/{dataset}/{title}.png")
 
 
 def create_gas_costs_totals_chart(
         gas_cost_totals: Dict[str, int],
         title: str,
         ylabel: str,
-        xlabel: str
+        xlabel: str,
+        dataset: str
 ):
 
     ids=[key for key in gas_cost_totals.keys()]
@@ -294,36 +301,50 @@ def create_gas_costs_totals_chart(
     fig.tight_layout()
     plt.show()
 
-    fig.savefig(f"figs/new/{title}.png")
+    fig.savefig(f"../figs/{dataset}/{title}.png")
 
 
-def create_test_chart():
-    labels = ['G1', 'G2', 'G3', 'G4', 'G5']
-    men_means = [20, 34, 30, 35, 27]
-    women_means = [25, 32, 34, 20, 25]
 
-    x = np.arange(len(labels))  # the label locations
-    width = 0.35  # the width of the bars
+
+def create_bar_chart(data: dict, *, dataset: str = 'bricks',
+                     title: str = '',
+                     x_label: str = '',
+                     y_label: str = '',
+                     val_key: str = ''):
+    ids = []
+    values = []
+    for key, value in data.items():
+        ids.append(key)
+        if isinstance(value, dict):
+            values.append(value[val_key])
+        else:
+            values.append(value)
+
+    x = np.arange(len(ids))  # the ids locations
+    width = 0.4  # the width of the bars
 
     fig, ax = plt.subplots()
-    rects1 = ax.bar(x - width / 2, men_means, width, label='Men')
-    rects2 = ax.bar(x + width / 2, women_means, width, label='Women')
+
+    rects1 = ax.bar(x, values, width, label=y_label, color="lightblue")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Scores')
-    ax.set_title('Scores by group and gender')
+    ax.set_ylabel(y_label)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('{x:,.0f}'))
+    ax.xaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('{x:,.0f}'))
+
+    ax.set_xlabel(x_label)
+    ax.set_title(title)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(ids)
     ax.legend()
 
-    ax.bar_label(rects1, padding=3)
-    ax.bar_label(rects2, padding=3)
+    ax.bar_label(rects1, fmt="%.0f")
 
     fig.tight_layout()
 
     plt.show()
 
-    fig.savefig("../figs/new/testChar2.png")
+    fig.savefig(f"../figs/{dataset}/{title}.png")
 
 # if __name__ == '__main__':
 #     parsed_user_data = get_parsed_users_data(cached=False)

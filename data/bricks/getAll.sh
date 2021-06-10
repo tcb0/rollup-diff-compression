@@ -1,0 +1,13 @@
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_13_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_12_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_11_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_10_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_9_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_8_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_7_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_6_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/FortNiteBR/round_5_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/fortnitebr/round_4_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/fortnitebr/round_3_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/fortnitebr/round_2_finalized.csv
+wget https://reddit-meta-production.s3.amazonaws.com/distribution/publish/fortnitebr/round_1_finalized.csv
